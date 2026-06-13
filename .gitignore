@@ -233,7 +233,7 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/go,linux,macos,windows,visualstudiocode,goland
 
 # Binary
-./docker-swarm-utils
+/docker-swarm-utils
 
 # AI
 .claude/

@@ -27,9 +27,7 @@ COPY examples/python/app.py .
 
 # Setup entrypoint
 COPY --from=builder /docker-swarm-utils /usr/local/bin/docker-swarm-utils
-COPY examples/python/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-swarm-utils", "entrypoint"]
 
 # Setup command
-CMD ["python3", "app.py"]
+CMD ["python", "app.py"]

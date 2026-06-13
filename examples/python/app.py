@@ -1,2 +1,5 @@
+import os
+
 if __name__ == "__main__":
     print("Hello from Python!")
+    print(f"FOO={os.environ['FOO']}")
