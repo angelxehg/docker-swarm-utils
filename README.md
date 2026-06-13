@@ -44,7 +44,7 @@ docker run --rm \
 
 ### Prerequisites
 
-- Go 1.21 or higher
+- Go 1.26 or higher
 
 ### Build
 
