@@ -45,6 +45,10 @@ func loadVariables(w io.Writer, dirPath string) error {
 	}
 
 	for key, value := range variables {
+		if !isValidEnvKey(key) {
+			fmt.Fprintf(os.Stderr, "Warning: skipping invalid environment variable name: %s\n", key)
+			continue
+		}
 		// Escape single quotes for shell safety: ' -> '\''
 		escapedValue := strings.ReplaceAll(value, "'", "'\\''")
 		fmt.Fprintf(w, "export %s='%s'\n", key, escapedValue)
@@ -62,7 +66,7 @@ func runEntrypoint() {
 
 	// TODO: make paths configurable via a file.
 	env := os.Environ()
-	for _, dir := range []string{"/run/secrets"} {
+	for _, dir := range []string{"/run/secrets", "/run/configs"} {
 		env = extendEnvWithDir(env, dir)
 	}
 
@@ -119,7 +123,7 @@ func getVariablesFromDir(dirPath string) (map[string]string, error) {
 		}
 
 		strContent := string(content)
-		if strings.Contains(strContent, "# format: dotenv") {
+		if strings.HasPrefix(strContent, "# format: dotenv") {
 			parsed, err := godotenv.Unmarshal(strContent)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: could not parse dotenv file %s: %v\n", entry.Name(), err)
@@ -143,4 +147,22 @@ func executeCommand(command string, args []string, env []string) error {
 	}
 
 	return syscall.Exec(path, args, env)
+}
+
+func isValidEnvKey(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for i, r := range s {
+		if i == 0 {
+			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_') {
+				return false
+			}
+		} else {
+			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_') {
+				return false
+			}
+		}
+	}
+	return true
 }

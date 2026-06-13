@@ -230,3 +230,49 @@ func TestGetVariablesFromDir_InvalidDotEnv(t *testing.T) {
 		t.Errorf("expected VALID=value, got %s", got["VALID"])
 	}
 }
+
+func TestIsValidEnvKey(t *testing.T) {
+	tests := []struct {
+		key  string
+		want bool
+	}{
+		{"VALID", true},
+		{"valid_name_123", true},
+		{"_START_WITH_UNDERSCORE", true},
+		{"123_INVALID_START", false},
+		{"INVALID-CHAR", false},
+		{"INVALID SPACE", false},
+		{"VAR;echo injection", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		if got := isValidEnvKey(tt.key); got != tt.want {
+			t.Errorf("isValidEnvKey(%q) = %v, want %v", tt.key, got, tt.want)
+		}
+	}
+}
+
+func TestLoadVariables_SkipsInvalidKeys(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "invalid-keys-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	os.WriteFile(filepath.Join(tempDir, "VALID"), []byte("value"), 0644)
+	os.WriteFile(filepath.Join(tempDir, "INVALID;KEY"), []byte("value"), 0644)
+
+	var buf bytes.Buffer
+	err = loadVariables(&buf, tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Contains(buf.Bytes(), []byte("export VALID='value'")) {
+		t.Error("Expected output to contain VALID")
+	}
+	if bytes.Contains(buf.Bytes(), []byte("INVALID;KEY")) {
+		t.Error("Expected output NOT to contain INVALID;KEY")
+	}
+}
