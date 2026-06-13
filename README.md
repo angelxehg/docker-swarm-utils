@@ -2,6 +2,23 @@
 
 A lightweight CLI tool designed to assist with Docker Secrets and Configs in Docker Swarm environments.
 
+## Usage
+
+Build a image:
+
+```bash
+docker build -f examples/python/Dockerfile -t swarm-utils:app .
+```
+
+Run image:
+
+```shell
+docker run --rm \
+  -v "$(pwd)/examples/python/simple_value.txt:/run/secrets/simple_value.txt:ro" \
+  -v "$(pwd)/examples/python/environment_values.txt:/run/secrets/environment_values.txt:ro" \
+  swarm-utils:app
+```
+
 ## Local Development
 
 ### Prerequisites
@@ -26,51 +43,6 @@ go build -o docker-swarm-utils .
 
 ```bash
 go test ./...
-```
-
-## Docker Usage
-
-This project supports multi-stage builds and provides two final image targets: `slim` (Debian-based) and `alpine` (Alpine-based).
-
-### Build Slim Image
-
-```bash
-docker build --target slim -t swarm-utils:slim .
-```
-
-### Run Slim Image
-
-```bash
-docker run --rm swarm-utils:slim
-```
-
-### Build Alpine Image
-
-```bash
-docker build --target alpine -t swarm-utils:alpine .
-```
-
-### Run Alpine Image
-
-```bash
-docker run --rm swarm-utils:alpine
-```
-
-## Docker Swarm Integration
-
-The binary is designed to be used in an entrypoint script to load Docker Secrets or Configs before your main application starts.
-
-Example `entrypoint.sh`:
-
-```bash
-#!/bin/sh
-set -e
-
-# Load secrets/configs using docker-swarm-utils (implementation pending)
-docker-swarm-utils
-
-# Start the main application
-exec "$@"
 ```
 
 ## Multi-Architecture Support
