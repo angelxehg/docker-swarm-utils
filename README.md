@@ -40,6 +40,25 @@ docker run --rm \
   swarm-utils:app
 ```
 
+## Use it in your image as an entrypoint
+
+You can use a multi-stage build to clone and build `docker-swarm-utils` from source directly in your `Dockerfile`:
+
+```dockerfile
+# Build docker-swarm-utils from source
+FROM golang:1.26-alpine AS swarm-utils-builder
+RUN apk add --no-cache git
+WORKDIR /src
+RUN git clone --branch v0.1.0 https://github.com/angelxehg/docker-swarm-utils.git .
+RUN CGO_ENABLED=0 go build -o /docker-swarm-utils .
+
+# Your application image
+FROM your-base-image
+COPY --from=swarm-utils-builder /docker-swarm-utils /usr/local/bin/docker-swarm-utils
+ENTRYPOINT ["/usr/local/bin/docker-swarm-utils", "entrypoint"]
+CMD ["your-app-command"]
+```
+
 ## Local Development
 
 ### Prerequisites
