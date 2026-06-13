@@ -1,0 +1,4 @@
+# format: dotenv
+APP_PORT=8080
+DEBUG=true
+DATABASE_URL=postgres://user:password@localhost:5432/dbname

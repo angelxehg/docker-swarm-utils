@@ -2,11 +2,68 @@
 
 A lightweight CLI tool designed to assist with Docker Secrets and Configs in Docker Swarm environments.
 
+## Usage
+
+### Build the Example Image
+
+```bash
+docker build -f examples/python/Dockerfile -t swarm-utils:app .
+```
+
+### Single-Value Secrets (Standard)
+
+By default, the tool treats every file in `/run/secrets` or `/run/configs` as a single environment variable where the filename is the key and the content is the value.
+
+```shell
+docker run --rm \
+  -v "$(pwd)/examples/python/simple_value.txt:/run/secrets/MY_SECRET:ro" \
+  swarm-utils:app
+```
+
+### Dotenv Support (Multi-Variable)
+
+If a secret file starts with (or contains) `# format: dotenv`, it will be parsed as a dotenv file, allowing multiple variables to be defined in a single file.
+
+Example `secrets.env`:
+```env
+# format: dotenv
+DB_USER=admin
+DB_PASS=secret123
+```
+
+Variables from this file will be exported individually (`DB_USER` and `DB_PASS`).
+
+Example run with dotenv file:
+```shell
+docker run --rm \
+  -v "$(pwd)/examples/python/environment_values.txt:/run/secrets/vars.env:ro" \
+  swarm-utils:app
+```
+
+## Use it in your image as an entrypoint
+
+You can use a multi-stage build to clone and build `docker-swarm-utils` from source directly in your `Dockerfile`:
+
+```dockerfile
+# Build docker-swarm-utils from source
+FROM golang:1.26-alpine AS swarm-utils-builder
+RUN apk add --no-cache git
+WORKDIR /src
+RUN git clone --branch v0.1.0 https://github.com/angelxehg/docker-swarm-utils.git .
+RUN CGO_ENABLED=0 go build -o /docker-swarm-utils .
+
+# Your application image
+FROM your-base-image
+COPY --from=swarm-utils-builder /docker-swarm-utils /usr/local/bin/docker-swarm-utils
+ENTRYPOINT ["/usr/local/bin/docker-swarm-utils", "entrypoint"]
+CMD ["your-app-command"]
+```
+
 ## Local Development
 
 ### Prerequisites
 
-- Go 1.21 or higher
+- Go 1.26 or higher
 
 ### Build
 
@@ -26,51 +83,6 @@ go build -o docker-swarm-utils .
 
 ```bash
 go test ./...
-```
-
-## Docker Usage
-
-This project supports multi-stage builds and provides two final image targets: `slim` (Debian-based) and `alpine` (Alpine-based).
-
-### Build Slim Image
-
-```bash
-docker build --target slim -t swarm-utils:slim .
-```
-
-### Run Slim Image
-
-```bash
-docker run --rm swarm-utils:slim
-```
-
-### Build Alpine Image
-
-```bash
-docker build --target alpine -t swarm-utils:alpine .
-```
-
-### Run Alpine Image
-
-```bash
-docker run --rm swarm-utils:alpine
-```
-
-## Docker Swarm Integration
-
-The binary is designed to be used in an entrypoint script to load Docker Secrets or Configs before your main application starts.
-
-Example `entrypoint.sh`:
-
-```bash
-#!/bin/sh
-set -e
-
-# Load secrets/configs using docker-swarm-utils (implementation pending)
-docker-swarm-utils
-
-# Start the main application
-exec "$@"
 ```
 
 ## Multi-Architecture Support
