@@ -14,8 +14,7 @@ Run image:
 
 ```shell
 docker run --rm \
-  -v "$(pwd)/examples/python/simple_value.txt:/run/secrets/simple_value.txt:ro" \
-  -v "$(pwd)/examples/python/environment_values.txt:/run/secrets/environment_values.txt:ro" \
+  -v "$(pwd)/examples/python/simple_value.txt:/run/secrets/FOO:ro" \
   swarm-utils:app
 ```
 
