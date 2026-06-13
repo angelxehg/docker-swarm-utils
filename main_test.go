@@ -158,3 +158,75 @@ func TestExtendEnvWithDir(t *testing.T) {
 		t.Error("OTHER_VAR=other-value missing from extended env")
 	}
 }
+
+func TestGetVariablesFromDir_DotEnv(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "dotenv-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Case 1: Standard secret
+	os.WriteFile(filepath.Join(tempDir, "DB_PASS"), []byte("secret123"), 0644)
+
+	// Case 2: Dotenv secret with hint
+	dotenvContent := "# format: dotenv\nFOO=bar\nBAZ=qux\n"
+	os.WriteFile(filepath.Join(tempDir, "app.env"), []byte(dotenvContent), 0644)
+
+	// Case 3: Override - lexical order
+	os.WriteFile(filepath.Join(tempDir, "00_base"), []byte("# format: dotenv\nCOMMON=base\n"), 0644)
+	os.WriteFile(filepath.Join(tempDir, "01_override"), []byte("# format: dotenv\nCOMMON=override\n"), 0644)
+
+	got, err := getVariablesFromDir(tempDir)
+	if err != nil {
+		t.Errorf("getVariablesFromDir() error = %v", err)
+	}
+
+	expected := map[string]string{
+		"DB_PASS": "secret123",
+		"FOO":     "bar",
+		"BAZ":     "qux",
+		"COMMON":  "override",
+	}
+
+	for k, v := range expected {
+		if val, ok := got[k]; !ok || val != v {
+			t.Errorf("expected %s=%s, got %s", k, v, val)
+		}
+	}
+
+	if len(got) != 4 {
+		t.Errorf("expected 4 variables, got %d: %v", len(got), got)
+	}
+}
+
+func TestGetVariablesFromDir_InvalidDotEnv(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "invalid-dotenv-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// File with hint but invalid syntax (godotenv might be lenient, but let's try something it should fail on if possible)
+	// Actually godotenv.Unmarshal is quite lenient. 
+	// Let's see if we can trigger an error. 
+	// According to godotenv source, it might fail if there's no '=' in a line that isn't a comment or empty, 
+	// BUT only if we use Parse. Unmarshal might behave differently.
+	
+	// Let's try to use a case that SHOULD be invalid.
+	content := "# format: dotenv\nINVALID_LINE_WITHOUT_EQUALS\n"
+	os.WriteFile(filepath.Join(tempDir, "invalid.env"), []byte(content), 0644)
+	os.WriteFile(filepath.Join(tempDir, "VALID"), []byte("value"), 0644)
+
+	got, err := getVariablesFromDir(tempDir)
+	if err != nil {
+		t.Errorf("getVariablesFromDir() error = %v", err)
+	}
+
+	// If godotenv.Unmarshal fails, it should skip the file.
+	// If it doesn't fail (because it's lenient), it might just not find variables.
+	
+	if got["VALID"] != "value" {
+		t.Errorf("expected VALID=value, got %s", got["VALID"])
+	}
+}

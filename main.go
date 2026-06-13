@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/joho/godotenv"
 )
 
 const InitMessage = "Docker Swarm Utils: initialized"
@@ -116,7 +118,19 @@ func getVariablesFromDir(dirPath string) (map[string]string, error) {
 			continue
 		}
 
-		variables[entry.Name()] = strings.TrimSpace(string(content))
+		strContent := string(content)
+		if strings.Contains(strContent, "# format: dotenv") {
+			parsed, err := godotenv.Unmarshal(strContent)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: could not parse dotenv file %s: %v\n", entry.Name(), err)
+				continue
+			}
+			for k, v := range parsed {
+				variables[k] = v
+			}
+		} else {
+			variables[entry.Name()] = strings.TrimSpace(strContent)
+		}
 	}
 
 	return variables, nil
